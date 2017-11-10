@@ -7,8 +7,8 @@ var port = process.env.PORT || 8080;
 app.use(bodyParser.json());
 
 //Your FanPageToken Generated in your FB App
-var token = "<page_access_token>";
-var verify_token = "<validation_token>";
+var token = "EAACD4yYQ7rQBAM5odWo0PPnXNSfPZAChM740GSIkPHDwNCS1AsCwIT8aZAmP6IxVVZC980K5ZA54bop2G2tCWUasYXYIZAQ1xaZAX67FM0lZCsymaoU5qKG2Q4psFAjAarKhHdFlA49pQmVxSjZBoL3TnKMEsBZB7X522SVRD51XqynyKKsN1f3ua";
+var verify_token = "MiNegocioenMaps";
 
 //Root EndPoint
 app.get('/', function (req, res) {
