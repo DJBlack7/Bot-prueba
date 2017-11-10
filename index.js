@@ -1,83 +1,136 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-var request = require('request');
-var app = express();
+/*
+ * Starter Project for Messenger Platform Quick Start Tutorial
+ *
+ * Remix this as the starting point for following the Messenger Platform
+ * quick start tutorial.
+ *
+ * https://developers.facebook.com/docs/messenger-platform/getting-started/quick-start/
+ *
+ */
 
-var port = process.env.PORT || 8080;
-app.use(bodyParser.json());
+'use strict';
 
-//Your FanPageToken Generated in your FB App
-var token = "EAACD4yYQ7rQBAM5odWo0PPnXNSfPZAChM740GSIkPHDwNCS1AsCwIT8aZAmP6IxVVZC980K5ZA54bop2G2tCWUasYXYIZAQ1xaZAX67FM0lZCsymaoU5qKG2Q4psFAjAarKhHdFlA49pQmVxSjZBoL3TnKMEsBZB7X522SVRD51XqynyKKsN1f3ua";
-var verify_token = "MiNegocioenMaps";
+const PAGE_ACCESS_TOKEN ="EAACD4yYQ7rQBAJuZABTqgOTaVi5p1ypdlkJtt9P9bELpcm2h0zZCdFDr2NlWs2opYz3A3lZAp82ZCGdeXZBMmlR4yVOX6XryjwxE0BZCu6k5N0Ejeh74UMiMsAXVrLzWbMrmj1hTFpiIHlwZANMip8FVidhEGYEVvxrovPmaCvFiBUx0ZA0AHpVE";
+// Imports dependencies and set up http server
+const
+  request = require('request'),
+  express = require('express'),
+  body_parser = require('body-parser'),
+  app = express().use(body_parser.json()); // creates express http server
 
-//Root EndPoint
-app.get('/', function (req, res) {
+// Sets server port and logs message on success
+app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'));
 
-    res.send('1206204601');
+// Accepts POST requests at /webhook endpoint
+app.post('/webhook', (req, res) => {
 
-});
+    // Parse the request body from the POST
+    let body = req.body;
 
-//Setup Webhook
-app.get('/webhook/', function (req, res) {
+    // Check the webhook event is from a Page subscription
+    if (body.object === 'page') {
 
-    if (req.query['hub.verify_token'] === verify_token) {
-        res.send(req.query['hub.challenge']);
+        // Iterate over each entry - there may be multiple if batched
+        body.entry.forEach(function (entry) {
+
+            // Gets the body of the webhook event
+            let webhook_event = entry.messaging[0];
+            console.log(webhook_event);
+
+
+            // Get the sender PSID
+            let sender_psid = webhook_event.sender.id;
+            console.log('Sender PSID: ' + sender_psid);
+
+            // Check if the event is a message or postback and
+            // pass the event to the appropriate handler function
+            if (webhook_event.message) {
+                handleMessage(sender_psid, webhook_event.message);
+            } else if (webhook_event.postback) {
+                handlePostback(sender_psid, webhook_event.postback);
+            }
+
+        });
+
+        // Return a '200 OK' response to all events
+        res.status(200).send('EVENT_RECEIVED');
+
+    } else {
+        // Return a '404 Not Found' if event is not from a page subscription
+        res.sendStatus(404);
     }
 
-    res.send('Error, wrong validation token');
-
 });
 
-app.post('/webhook/', function (req, res) {
+// Accepts GET requests at the /webhook endpoint
+app.get('/webhook', (req, res) => {
 
-    var messaging_events = req.body.entry[0].messaging;
+    /** UPDATE YOUR VERIFY TOKEN **/
+    const VERIFY_TOKEN = "MiNegocioenMapsPrueba";
 
-    for (var i = 0; i < messaging_events.length; i++) {
+    // Parse params from the webhook verification request
+    let mode = req.query['hub.mode'];
+    let token = req.query['hub.verify_token'];
+    let challenge = req.query['hub.challenge'];
 
-        var event = req.body.entry[0].messaging[i];
-        var sender = event.sender.id;
+    // Check if a token and mode were sent
+    if (mode && token) {
 
-        if (event.message && event.message.text) {
-            var text = event.message.text;
+        // Check the mode and token sent are correct
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
 
-            sendTextMessage(sender, "Text received, echo: "+ text.substring(0, 200));
+            // Respond with 200 OK and challenge token from the request
+            console.log('WEBHOOK_VERIFIED');
+            res.status(200).send(challenge);
+
+        } else {
+            // Responds with '403 Forbidden' if verify tokens do not match
+            res.sendStatus(403);
+        }
+    }
+});
+// Handles messages events
+function handleMessage(sender_psid, received_message) {
+    let response;
+
+    // Check if the message contains text
+    if (received_message.text) {
+
+        // Create the payload for a basic text message
+        response = {
+            "text": `You sent the message: "${received_message.text}". Now send me an image!`
         }
     }
 
-    res.sendStatus(200);
+    // Sends the response message
+    callSendAPI(sender_psid, response);
+}
 
-});
+// Handles messaging_postbacks events
+function handlePostback(sender_psid, received_postback) {
 
-//App listen
-app.listen(port, function () {
+}
 
-    console.log('Facebook Messenger Bot on port: ' + port);
-
-});
-
-//send Message with Facebook Graph Facebook v2.6
-function sendTextMessage(sender, text) {
-
-    var messageData = {
-        text: text
-    };
-
+// Sends response messages via the Send API
+function callSendAPI(sender_psid, response) {
+    // Construct the message body
+    let message = {
+        "recipient": {
+            "id": sender_psid
+        },
+        "message": response
+    }
+    // Send the HTTP request to the Messenger Platform
     request({
-        url: 'https://graph.facebook.com/v2.6/me/messages',
-        qs: {access_token: token},
-        method: 'POST',
-        json: {
-            recipient: {id: sender},
-            message: messageData
+        "uri": "https://graph.facebook.com/v2.6/me/messages",
+        "qs": { "access_token": PAGE_ACCESS_TOKEN },
+        "method": "POST",
+        "json": "request_body"
+    }, (err, res, body) => {
+        if (!err) {
+            console.log('message sent!')
+        } else {
+            console.error("Unable to send message:" + err);
         }
-    }, function (error, response) {
-
-        if (error) {
-            console.log('Error sending message: ', error);
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error);
-        }
-
     });
-
 }
