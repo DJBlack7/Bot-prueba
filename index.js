@@ -13,7 +13,7 @@ var verify_token = "MiNegocioenMaps";
 //Root EndPoint
 app.get('/', function (req, res) {
 
-    res.send('Facebook Messenger Bot root endpoint!');
+    res.send('1206204601');
 
 });
 
